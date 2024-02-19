@@ -1,0 +1,3 @@
+<jboss-web>
+    <security-domain>jwt-app-sec-domain</security-domain>
+</jboss-web>

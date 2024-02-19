@@ -9,6 +9,8 @@ batch
 
 /subsystem=elytron/token-realm=jwt-realm:remove()
 
+/subsystem=undertow/application-security-domain=jwt-app-sec-domain:remove()
+
 run-batch
 
 reload

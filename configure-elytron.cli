@@ -7,11 +7,6 @@
 # Create http authentication factory that uses BEARER_TOKEN authentication
 /subsystem=elytron/http-authentication-factory=jwt-http-authentication:add(security-domain=jwt-domain, http-server-mechanism-factory=global, mechanism-configurations=[{mechanism-name="BEARER_TOKEN", mechanism-realm-configurations=[{realm-name="jwt-realm"}]}])
 
-# These last two commands are mutually exclusive attributes and must be grouped in a batch command
-batch
 # Configure Undertow to use our http authentication factory for authentication
-/subsystem=undertow/application-security-domain=other:undefine-attribute(name=security-domain)
-/subsystem=undertow/application-security-domain=other:write-attribute(name=http-authentication-factory, value=jwt-http-authentication)
-run-batch
-
+/subsystem=undertow/application-security-domain=jwt-app-sec-domain:add(http-authentication-factory=jwt-http-authentication)
 reload
