@@ -9,8 +9,6 @@ batch
 
 /subsystem=elytron/token-realm=jwt-realm:remove()
 
-/subsystem=elytron/key-store=jwt-key-store:remove()
-
 run-batch
 
 reload

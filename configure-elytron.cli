@@ -1,5 +1,5 @@
 # Add a new token security realm to Elytron for authentication using JWTs
-/subsystem=elytron/token-realm=jwt-realm:add(jwt={issuer=["quickstart-jwt-issuer"], audience=["jwt-audience"], key-map={1="-----BEGIN PUBLIC KEY-----MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAmu0snwX3dZlgk7ZMBDb+/EZXsvvsqQ7gx6WP+kmQ115dE8t8mOALk4AFkcCtf4jm/4nvhUrYm0pBsB4eloH8jE+qwlYaseJzztozzT7VnJeuaU6UbZFvEZCwkFht53OAySNa1jm5mpiLqtZd8dhzfDfalwCrbkZxXH1Y+4lUZslMgr3pFxfcRMFm3iFVFVTf8WnG7aV+/Kf/V1fnnPyyREST8TMtyowws0hhC1BOAnDLJNPIAc/8e9VEOEN9YcnloVe9t5f1+rH1Zf6qeG/hIHl0vc3M0+P1RJ3GawCgHbsqHBch85xryuXr6OqdwSoqDken6Sd3UDKCx32szOEmJIRgqTABt9bq+f8DqxHzVOMTqhCmFlpFh/aTBtTfwvq4znc6DXoTcxx3IZxRsL9aD0WOvFgZTuuSdgrZLAzXr2FzoHDRtJBgZTAXy9mr96Nu2Tc0QmgCsjBn2T1BYAEK0iih9t/RK+NKWn2bH6qvVBjt41G4IJk3vGqstJ+CRb2TAgMBAAE=-----END PUBLIC KEY-----"}}, principal-claim="sub")
+/subsystem=elytron/token-realm=jwt-realm:add(jwt={issuer=["quickstart-jwt-issuer"], audience=["jwt-audience"], key-map={1="${env.JWT_PUBLIC_KEY1}", 2="${env.JWT_PUBLIC_KEY2}"}}, principal-claim="sub")
 
 # Add a new security domain, which uses the jwt security realm
 /subsystem=elytron/security-domain=jwt-domain:add(realms=[{realm=jwt-realm, role-decoder=groups-to-roles}], permission-mapper=default-permission-mapper, default-realm=jwt-realm)
@@ -13,3 +13,5 @@ batch
 /subsystem=undertow/application-security-domain=other:undefine-attribute(name=security-domain)
 /subsystem=undertow/application-security-domain=other:write-attribute(name=http-authentication-factory, value=jwt-http-authentication)
 run-batch
+
+reload

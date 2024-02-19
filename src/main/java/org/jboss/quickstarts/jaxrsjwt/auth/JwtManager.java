@@ -38,12 +38,14 @@ import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObjectBuilder;
 
+@SuppressWarnings("unused")
 @ApplicationScoped
 public class JwtManager {
 
     static {
         try {
-            privateKey = loadPrivateKeyFromPem("/Users/milad/Desktop/kid1.key");
+            String pkPath = System.getProperty("JwtPrivateKeyPath");
+            privateKey = loadPrivateKeyFromPem(pkPath);
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
         }
