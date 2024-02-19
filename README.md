@@ -50,11 +50,13 @@ export JWT_PRIVATE_KEY2=`pwd`"/kid2.key"
 
 # Set the private key path
 
-Set the private key path:
+Set the private key path and the `kid`:
 
 ```shell
 ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c
 [standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:add(value="${env.JWT_PRIVATE_KEY1}")
+{"outcome" => "success"}
+[standalone@localhost:9990 /] /system-property=JwtKid:add(value="1")
 {"outcome" => "success"}
 ```
 
@@ -74,6 +76,22 @@ mvn clean package wildfly:deploy
 mvn verify -Pintegration-testing
 ```
 
+# Using another private key
+
+```shell
+~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c
+[standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:remove
+{"outcome" => "success"}
+[standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:add(value="${env.JWT_PRIVATE_KEY2}")
+{"outcome" => "success"}
+[standalone@localhost:9990 /] /system-property=JwtKid:add(value="2")
+{"outcome" => "success"}
+```
+
+```shell
+mvn verify -Pintegration-testing
+```
+
 # Restore the configuration
 
 Undeploy the app:
@@ -86,6 +104,8 @@ Unset the private key path:
 ```shell
 ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c
 [standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:remove
+{"outcome" => "success"}
+[standalone@localhost:9990 /] /system-property=JwtKid:remove
 {"outcome" => "success"}
 ```
 

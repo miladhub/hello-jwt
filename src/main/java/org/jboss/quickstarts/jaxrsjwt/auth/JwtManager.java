@@ -19,8 +19,6 @@ package org.jboss.quickstarts.jaxrsjwt.auth;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
@@ -38,7 +36,6 @@ import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObjectBuilder;
 
-@SuppressWarnings("unused")
 @ApplicationScoped
 public class JwtManager {
 
@@ -46,22 +43,9 @@ public class JwtManager {
         try {
             String pkPath = System.getProperty("JwtPrivateKeyPath");
             privateKey = loadPrivateKeyFromPem(pkPath);
+            kid = System.getProperty("JwtKid");
         } catch (Exception e) {
             throw new ExceptionInInitializerError(e);
-        }
-    }
-
-    private static PrivateKey loadPrivateKeyFromPKCS12Store()
-    throws Exception {
-        final String configDir = System.getProperty("jboss.server.config.dir");
-        final Path keyStore = Path.of(configDir, "jwt.keystore");
-        char[] password = "secret".toCharArray();
-        String alias = "jwt-auth";
-        try (InputStream in = Files.newInputStream(keyStore)) {
-            final KeyStore ks = KeyStore.getInstance("PKCS12");
-            ks.load(in, password);
-            Key key = ks.getKey(alias, password);
-            return (PrivateKey) key;
         }
     }
 
@@ -84,6 +68,7 @@ public class JwtManager {
     }
 
     private static final PrivateKey privateKey;
+    private static final String kid;
     private static final int TOKEN_VALIDITY = 14400;
     private static final String ISSUER = "quickstart-jwt-issuer";
     private static final String AUDIENCE = "jwt-audience";
@@ -99,7 +84,7 @@ public class JwtManager {
                 .add("exp", ((System.currentTimeMillis() / 1000) + TOKEN_VALIDITY));
 
         final JWSObject jwsObject = new JWSObject(new JWSHeader.Builder(JWSAlgorithm.RS256)
-                .keyID("1")
+                .keyID(kid)
                 .type(new JOSEObjectType("jwt")).build(),
                 new Payload(claimsBuilder.build().toString()));
 
