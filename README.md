@@ -6,6 +6,12 @@ authenticate via JWT.
 
 Adapted from <https://github.com/wildfly/quickstart/tree/main/jaxrs-jwt>.
 
+# Build
+
+```shell
+mvn clean install
+```
+
 # Create the private keys and certificates
 
 ```shell
