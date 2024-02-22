@@ -1,20 +1,4 @@
-/*
- * JBoss, Home of Professional Open Source
- * Copyright 2018, Red Hat, Inc. and/or its affiliates, and individual
- * contributors by the @authors tag. See the copyright.txt in the
- * distribution for a full listing of individual contributors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-package org.jboss.quickstarts.jaxrsjwt.auth;
+package org.sample;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -31,22 +15,28 @@ import com.nimbusds.jose.JWSObject;
 import com.nimbusds.jose.JWSSigner;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.crypto.RSASSASigner;
-import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.Json;
 import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObjectBuilder;
 
-@ApplicationScoped
-public class JwtManager {
+public class JwtClient {
+    private final PrivateKey privateKey;
+    private final String kid;
 
-    static {
-        try {
-            String pkPath = System.getProperty("JwtPrivateKeyPath");
-            privateKey = loadPrivateKeyFromPem(pkPath);
-            kid = System.getProperty("JwtKid");
-        } catch (Exception e) {
-            throw new ExceptionInInitializerError(e);
-        }
+    public JwtClient(PrivateKey privateKey, String kid) {
+        this.privateKey = privateKey;
+        this.kid = kid;
+    }
+
+    public static void main(String[] args) throws Exception {
+        String pkPath = args[0];
+        String kid = args[1];
+        String user = args[2];
+        String[] roles = args[3].split(",");
+        PrivateKey privateKey = loadPrivateKeyFromPem(pkPath);
+        JwtClient client = new JwtClient(privateKey, kid);
+        String jwt = client.createJwt(user, roles);
+        System.out.println(jwt);
     }
 
     private static PrivateKey loadPrivateKeyFromPem(final String fileName)
@@ -67,8 +57,6 @@ public class JwtManager {
         }
     }
 
-    private static final PrivateKey privateKey;
-    private static final String kid;
     private static final int TOKEN_VALIDITY = 14400;
     private static final String ISSUER = "quickstart-jwt-issuer";
     private static final String AUDIENCE = "jwt-audience";

@@ -43,28 +43,15 @@ cp ~/wildfly-31.0.0.Final/standalone/configuration/standalone.xml \
 Start WildFly:
 
 ```shell
-export JWT_PRIVATE_KEY1=`pwd`"/kid1.key"
-export JWT_PRIVATE_KEY2=`pwd`"/kid2.key"
 ~/wildfly-31.0.0.Final/bin/standalone.sh
-```
-
-# Set the private key path
-
-Set the private key path and the `kid`:
-
-```shell
-~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c
-[standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:add(value="${env.JWT_PRIVATE_KEY1}")
-{"outcome" => "success"}
-[standalone@localhost:9990 /] /system-property=JwtKid:add(value="1")
-{"outcome" => "success"}
 ```
 
 # Configure WildFly for JWT authentication
 
+This configures the JWT token access, authorizing kid 1:
+
 ```shell
 export JWT_PUBLIC_KEY1=`openssl x509 -pubkey -noout -in kid1.crt`
-export JWT_PUBLIC_KEY2=`openssl x509 -pubkey -noout -in kid2.crt`
 ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --resolve-parameter-values \
   --file=configure-elytron.cli
 ```
@@ -72,24 +59,76 @@ export JWT_PUBLIC_KEY2=`openssl x509 -pubkey -noout -in kid2.crt`
 # Build and deploy the app
 
 ```shell
-mvn clean package wildfly:deploy
-mvn verify -Pintegration-testing
+mvn clean package wildfly:deploy -f hello-jwt-app
 ```
 
-# Using another private key
+# Echoing the claims
 
 ```shell
-~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c
-[standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:remove
-{"outcome" => "success"}
-[standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:add(value="${env.JWT_PRIVATE_KEY2}")
-{"outcome" => "success"}
-[standalone@localhost:9990 /] /system-property=JwtKid:add(value="2")
-{"outcome" => "success"}
+$ TOKEN1=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 admin admin`
+$ curl -H "Authorization: Bearer $TOKEN1" http://localhost:18080/hello-jwt-app/rest/claims | jq
+{
+  "sub": "admin",
+  "iss": "quickstart-jwt-issuer",
+  "aud": [
+    "jwt-audience"
+  ],
+  "groups": [
+    "admin"
+  ],
+  "exp": "2024-02-22T13:38:30Z[UTC]"
+}
 ```
 
+# Verify access denied with kid 2
+
 ```shell
-mvn verify -Pintegration-testing
+$ TOKEN2=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid2.key 2 admin admin`
+$ curl -H "Authorization: Bearer $TOKEN2" http://localhost:18080/hello-jwt-app/rest/protected
+<html><head><title>Error</title></head><body>Unauthorized</body></html>
+```
+
+# Verify access granted with kid 1
+
+```shell
+$ TOKEN1=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 admin admin`
+$ curl -H "Authorization: Bearer $TOKEN1" http://localhost:18080/hello-jwt-app/rest/protected | jq
+{
+  "path": "protected",
+  "result": "Hello admin!"
+}
+```
+
+# Adding kid 2
+
+```shell
+$ export JWT_PUBLIC_KEY1=`openssl x509 -pubkey -noout -in kid1.crt`
+$ export JWT_PUBLIC_KEY2=`openssl x509 -pubkey -noout -in kid2.crt`
+$ ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --resolve-parameter-values
+[standalone@localhost:9990 /] /subsystem=elytron/token-realm=jwt-realm:write-attribute(\
+  name=jwt, value={ \
+  issuer=["quickstart-jwt-issuer"], \
+  audience=["jwt-audience"], \
+  key-map={ 1="${env.JWT_PUBLIC_KEY1}", 2="${env.JWT_PUBLIC_KEY2}" }})
+[standalone@localhost:9990 /] :reload
+[standalone@localhost:9990 /] exit
+$ curl -H "Authorization: Bearer $TOKEN2" http://localhost:18080/hello-jwt-app/rest/protected
+{"path":"protected","result":"Hello admin!"}
+```
+
+# Verify access granted or denied by user
+
+```shell
+$ TOKEN_ADMIN=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 admin admin`
+$ TOKEN_CUSTOMER=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 customer customer`
+$ curl -H "Authorization: Bearer $TOKEN_ADMIN" http://localhost:18080/hello-jwt-app/rest/customer
+<html><head><title>Error</title></head><body>Forbidden</body></html>
+$ curl -H "Authorization: Bearer $TOKEN_CUSTOMER" http://localhost:18080/hello-jwt-app/rest/protected
+<html><head><title>Error</title></head><body>Forbidden</body></html>
+$ curl -H "Authorization: Bearer $TOKEN_ADMIN" http://localhost:18080/hello-jwt-app/rest/protected
+{"path":"protected","result":"Hello admin!"}
+$ curl -H "Authorization: Bearer $TOKEN_CUSTOMER" http://localhost:18080/hello-jwt-app/rest/customer
+{"path":"customer","result":"Hello customer!"}
 ```
 
 # Restore the configuration
@@ -97,16 +136,7 @@ mvn verify -Pintegration-testing
 Undeploy the app:
 
 ```shell
-mvn wildfly:undeploy
-```
-Unset the private key path:
-
-```shell
-~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c
-[standalone@localhost:9990 /] /system-property=JwtPrivateKeyPath:remove
-{"outcome" => "success"}
-[standalone@localhost:9990 /] /system-property=JwtKid:remove
-{"outcome" => "success"}
+mvn wildfly:undeploy -f hello-jwt-app/
 ```
 
 Stop WildFly:
