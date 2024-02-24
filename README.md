@@ -30,29 +30,17 @@ rm kid*.csr
 
 # Install WildFly
 
-Download WildFly 31:
+Download and start WildFly 31:
 
 ```shell
-rm -rf ~/wildfly-31.0.0.Final
 curl https://github.com/wildfly/wildfly/releases/download/31.0.0.Final/wildfly-31.0.0.Final.zip \
   -L -o ~/Downloads/wildfly-31.0.0.Final.zip
+rm -rf ~/wildfly-31.0.0.Final
 unzip ~/Downloads/wildfly-31.0.0.Final.zip -d ~
-```
-
-Backup the XML configuration:
-
-```shell
-cp ~/wildfly-31.0.0.Final/standalone/configuration/standalone.xml \
-  ~/wildfly-31.0.0.Final/standalone/configuration/standalone.xml.bk
-```
-
-Start WildFly:
-
-```shell
 ~/wildfly-31.0.0.Final/bin/standalone.sh
 ```
 
-# Configure WildFly for JWT authentication
+# Configure WildFly for JWT authentication to grant kid 1 access
 
 This configures the JWT token access, authorizing kid 1:
 
@@ -72,7 +60,7 @@ mvn clean package wildfly:deploy -f hello-jwt-app
 
 ```shell
 $ TOKEN1=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 admin admin`
-$ curl -H "Authorization: Bearer $TOKEN1" http://localhost:18080/hello-jwt-app/rest/claims | jq
+$ curl -H "Authorization: Bearer $TOKEN1" http://localhost:8080/hello-jwt-app/rest/claims | jq
 {
   "sub": "admin",
   "iss": "quickstart-jwt-issuer",
@@ -90,7 +78,7 @@ $ curl -H "Authorization: Bearer $TOKEN1" http://localhost:18080/hello-jwt-app/r
 
 ```shell
 $ TOKEN2=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid2.key 2 admin admin`
-$ curl -H "Authorization: Bearer $TOKEN2" http://localhost:18080/hello-jwt-app/rest/protected
+$ curl -H "Authorization: Bearer $TOKEN2" http://localhost:8080/hello-jwt-app/rest/protected
 <html><head><title>Error</title></head><body>Unauthorized</body></html>
 ```
 
@@ -98,7 +86,7 @@ $ curl -H "Authorization: Bearer $TOKEN2" http://localhost:18080/hello-jwt-app/r
 
 ```shell
 $ TOKEN1=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 admin admin`
-$ curl -H "Authorization: Bearer $TOKEN1" http://localhost:18080/hello-jwt-app/rest/protected | jq
+$ curl -H "Authorization: Bearer $TOKEN1" http://localhost:8080/hello-jwt-app/rest/protected | jq
 {
   "path": "protected",
   "result": "Hello admin!"
@@ -118,8 +106,12 @@ $ ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --resolve-parameter-values
   key-map={ 1="${env.JWT_PUBLIC_KEY1}", 2="${env.JWT_PUBLIC_KEY2}" }})
 [standalone@localhost:9990 /] :reload
 [standalone@localhost:9990 /] exit
-$ curl -H "Authorization: Bearer $TOKEN2" http://localhost:18080/hello-jwt-app/rest/protected
-{"path":"protected","result":"Hello admin!"}
+$ curl -H "Authorization: Bearer $TOKEN2" \
+  http://localhost:8080/hello-jwt-app/rest/protected | jq
+{
+  "path": "protected",
+  "result": "Hello admin!"
+}
 ```
 
 # Verify access granted or denied by user
@@ -127,34 +119,29 @@ $ curl -H "Authorization: Bearer $TOKEN2" http://localhost:18080/hello-jwt-app/r
 ```shell
 $ TOKEN_ADMIN=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 admin admin`
 $ TOKEN_CUSTOMER=`java -cp "hello-jwt-client/target/*" org.sample.JwtClient kid1.key 1 customer customer`
-$ curl -H "Authorization: Bearer $TOKEN_ADMIN" http://localhost:18080/hello-jwt-app/rest/customer
+$ curl -H "Authorization: Bearer $TOKEN_ADMIN" \
+  http://localhost:8080/hello-jwt-app/rest/customer
 <html><head><title>Error</title></head><body>Forbidden</body></html>
-$ curl -H "Authorization: Bearer $TOKEN_CUSTOMER" http://localhost:18080/hello-jwt-app/rest/protected
+$ curl -H "Authorization: Bearer $TOKEN_CUSTOMER" \
+  http://localhost:8080/hello-jwt-app/rest/protected
 <html><head><title>Error</title></head><body>Forbidden</body></html>
-$ curl -H "Authorization: Bearer $TOKEN_ADMIN" http://localhost:18080/hello-jwt-app/rest/protected
-{"path":"protected","result":"Hello admin!"}
-$ curl -H "Authorization: Bearer $TOKEN_CUSTOMER" http://localhost:18080/hello-jwt-app/rest/customer
-{"path":"customer","result":"Hello customer!"}
+$ curl -H "Authorization: Bearer $TOKEN_ADMIN" \
+  http://localhost:8080/hello-jwt-app/rest/protected | jq
+{
+  "path": "protected",
+  "result": "Hello admin!"
+}
+$ curl -H "Authorization: Bearer $TOKEN_CUSTOMER" \
+  http://localhost:8080/hello-jwt-app/rest/customer | jq
+{
+  "path": "customer",
+  "result": "Hello customer!"
+}
 ```
 
 # Restore the configuration
 
-Undeploy the app:
-
 ```shell
 mvn wildfly:undeploy -f hello-jwt-app/
-```
-
-Stop WildFly:
-
-```shell
-rm ~/wildfly-31.0.0.Final/standalone/configuration/standalone.xml && \
-  cp ~/wildfly-31.0.0.Final/standalone/configuration/standalone.xml.bk \
-  ~/wildfly-31.0.0.Final/standalone/configuration/standalone.xml
-```
-
-or:
-
-```shell
 ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --file=restore-configuration.cli
 ```
