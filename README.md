@@ -45,9 +45,19 @@ unzip ~/Downloads/wildfly-31.0.0.Final.zip -d ~
 This configures the JWT token access, authorizing kid 1:
 
 ```shell
-export JWT_PUBLIC_KEY1=`openssl x509 -pubkey -noout -in kid1.crt`
-~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --resolve-parameter-values \
-  --file=configure-elytron.cli
+~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --file=configure-elytron.cli
+```
+
+# Add a public key to the JWT realm
+
+```shell
+$ export JWT_PUBLIC_KEY1=`openssl x509 -pubkey -noout -in kid1.crt`
+$ ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --resolve-parameter-values
+
+[standalone@localhost:9990 /] /subsystem=elytron/token-realm=jwt-realm:map-put(name=jwt, key=key-map, \
+  value={1="${env.JWT_PUBLIC_KEY1}"})
+[standalone@localhost:9990 /] :reload
+[standalone@localhost:9990 /] exit
 ```
 
 # Build and deploy the app
@@ -98,14 +108,15 @@ $ curl -H "Authorization: Bearer $TOKEN1" http://localhost:8080/hello-jwt-app/re
 ```shell
 $ export JWT_PUBLIC_KEY1=`openssl x509 -pubkey -noout -in kid1.crt`
 $ export JWT_PUBLIC_KEY2=`openssl x509 -pubkey -noout -in kid2.crt`
+
 $ ~/wildfly-31.0.0.Final/bin/jboss-cli.sh -c --resolve-parameter-values
-[standalone@localhost:9990 /] /subsystem=elytron/token-realm=jwt-realm:write-attribute(\
-  name=jwt, value={ \
-  issuer=["quickstart-jwt-issuer"], \
-  audience=["jwt-audience"], \
-  key-map={ 1="${env.JWT_PUBLIC_KEY1}", 2="${env.JWT_PUBLIC_KEY2}" }})
+
+[standalone@localhost:9990 /] /subsystem=elytron/token-realm=jwt-realm:map-put(name=jwt, key=key-map, \
+  value={1="${env.JWT_PUBLIC_KEY1}", 2="${env.JWT_PUBLIC_KEY2}"})
+
 [standalone@localhost:9990 /] :reload
 [standalone@localhost:9990 /] exit
+
 $ curl -H "Authorization: Bearer $TOKEN2" \
   http://localhost:8080/hello-jwt-app/rest/protected | jq
 {

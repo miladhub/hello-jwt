@@ -1,7 +1,6 @@
 # Add a new token security realm to Elytron for authentication using JWTs
 /subsystem=elytron/token-realm=jwt-realm:add(jwt={issuer=["quickstart-jwt-issuer"], \
-    audience=["jwt-audience"], key-map={1="${env.JWT_PUBLIC_KEY1}"}}, \
-    principal-claim="sub")
+    audience=["jwt-audience"]}, principal-claim="sub")
 
 # Add a new security domain, which uses the jwt security realm
 /subsystem=elytron/security-domain=jwt-domain:add(realms=[{realm=jwt-realm, \
